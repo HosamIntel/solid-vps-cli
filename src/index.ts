@@ -105,11 +105,7 @@ async function run() {
 
   console.log(`\nScaffolding project in ${root}`);
 
-  const localTemplateDir = path.resolve(
-    fileURLToPath(import.meta.url),
-    '../..',
-    `${template}-template`
-  );
+  const localTemplateDir = path.join(cwd, `${template}-template`);
 
   const write = (file: string, content?: string) => {
     const targetPath = path.join(root, file);
