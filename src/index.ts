@@ -1,91 +1,90 @@
 import minimist from 'minimist';
-import { blue, red, reset, yellow } from 'kolorist';
+import { red, lightMagenta, lightBlue, lightYellow } from 'kolorist';
 import path from 'node:path';
 import prompts from 'prompts';
 import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
+
 
 const cwd = process.cwd();
-
-const argv = minimist<{ template?: string; t?: string }>(
+const args = minimist<{ template?: string; t?: string }>(
   process.argv.slice(2),
   {
     string: ['_'],
   }
-);
-
-type ColorFunc = (str: string | number) => string;
+  );
+  
+type ColorType = (color: string | number) => string;
 
 type Option = {
   name: string;
-  display: string;
-  color: ColorFunc;
+  displayName: string;
+  color: ColorType;
 };
 
-const options: Option[] = [
+const projectTypes: Option[] = [
   {
     name: 'solid',
-    display: 'Javascript',
-    color: yellow,
+    displayName: 'Javascript',
+    color: lightYellow,
   },
   {
     name: 'solid-ts',
-    display: 'Typescript',
-    color: blue,
+    displayName: 'Typescript',
+    color: lightBlue,
   },
 ];
 
-const templates = options.map((option: Option) => {
+const templates = projectTypes.map((option: Option) => {
   return option.name;
 });
 
 const defaultProjectDir = 'solid-js-app';
 
 async function run() {
-  const argProjectDir = formatTargetDir(argv._[0]);
-  const argTemplate = argv.template;
+  const argProjectDir = args._[0];
+  const argTemplate = args.template;
 
   let projectDir = argProjectDir || defaultProjectDir;
   const getProjectName = () =>
     projectDir === '.' ? path.basename(path.resolve()) : projectDir;
 
-  let result: prompts.Answers<'projectName' | 'option'>;
+  let cli: prompts.Answers<'projectName' | 'projectType'>;
 
   try {
-    result = await prompts(
+    cli = await prompts(
       [
         {
           type: argProjectDir ? null : 'text',
           name: 'projectName',
-          message: reset('Project name:'),
+          message: lightMagenta('Name Of Project: '),
           initial: defaultProjectDir,
           onState: (state) => {
-            projectDir = formatTargetDir(state.value) || defaultProjectDir;
+            projectDir = state.value || defaultProjectDir;
           },
         },
         {
           type:
             argTemplate && templates.includes(argTemplate) ? null : 'select',
-          name: 'option',
+          name: 'projectType',
           message:
             typeof argTemplate === 'string' && !templates.includes(argTemplate)
-              ? reset(
-                  `"${argTemplate}" isn't a valid template. Please choose from below: `
+              ? lightMagenta(
+                  `The Template Chosen (${argTemplate}) Is Not Valid, Please Choose From The List Below`
                 )
-              : reset('Select an Option'),
+              : lightMagenta('Select a Type'),
           initial: 0,
-          choices: options.map((option) => {
-            const frameworkColor = option.color;
+          choices: projectTypes.map((type) => {
+            const color = type.color;
             return {
-              title: frameworkColor(option.display || option.name),
-              value: option,
+              title: color(type.displayName || type.name),
+              value: type,
             };
           }),
         },
       ],
       {
         onCancel: () => {
-          throw new Error(red('✖') + ' Operation cancelled');
+          throw new Error(red('CANCELED BY DEVELOPER !'));
         },
       }
     );
@@ -94,16 +93,16 @@ async function run() {
     return;
   }
 
-  const { option } = result;
+  const { projectType } = cli;
 
   const root = path.join(cwd, projectDir);
-  const template = option ? option.name : argTemplate;
+  const template = projectType ? projectType.name : argTemplate;
   const pkgInfo = pkgFromUserAgent(process.env.npm_config_user_agent);
   const pkgManager = pkgInfo ? pkgInfo.name : 'npm';
 
   fs.mkdirSync(root, { recursive: true });
 
-  console.log(`\nScaffolding project in ${root}`);
+  console.log(`\nCreating New Project In ${root}`);
 
   const localTemplateDir = path.join(cwd, `${template}-template`);
 
@@ -131,31 +130,19 @@ async function run() {
       write(file);
     });
 
-  console.log(`\nDone. Now run:\n`);
+  console.log(`\nProject Created`);
+  console.log(`\nRun The Commands Below To Start, Happy Coding !!\n`);
   if (root !== cwd) {
     console.log(`  cd ${path.relative(cwd, root)}`);
   }
-  switch (pkgManager) {
-    case 'yarn':
-      console.log('  yarn');
-      console.log('  yarn dev');
-      break;
-    default:
-      console.log(`  ${pkgManager} install`);
-      console.log(`  ${pkgManager} run dev`);
-      break;
-  }
-  console.log();
+  console.log(`  ${pkgManager} install`);
+  console.log(`  ${pkgManager} run dev`);
 }
 
 try {
   run();
 } catch (error) {
-  console.log('error Occurred');
-}
-
-function formatTargetDir(targetDir: string | undefined) {
-  return targetDir?.trim().replace(/\/+$/g, '');
+  console.log(red('Error Occurred'));
 }
 
 function copyDir(srcDir: string, destDir: string) {
