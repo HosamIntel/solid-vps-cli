@@ -1,9 +1,8 @@
 import minimist from 'minimist';
-import { red, lightMagenta, lightBlue, lightYellow } from 'kolorist';
+import { red, lightBlue, lightYellow, white } from 'kolorist';
 import path from 'node:path';
 import prompts from 'prompts';
 import fs from 'node:fs';
-
 
 const cwd = process.cwd();
 const args = minimist<{ template?: string; t?: string }>(
@@ -11,8 +10,8 @@ const args = minimist<{ template?: string; t?: string }>(
   {
     string: ['_'],
   }
-  );
-  
+);
+
 type ColorType = (color: string | number) => string;
 
 type Option = {
@@ -56,11 +55,15 @@ async function run() {
         {
           type: argProjectDir ? null : 'text',
           name: 'projectName',
-          message: lightMagenta('Name Of Project: '),
+          message: white('Name Of Project: '),
           initial: defaultProjectDir,
           onState: (state) => {
             projectDir = state.value || defaultProjectDir;
           },
+          validate: (value) =>
+            !fs.existsSync(value) || isEmpty(value)
+              ? true
+              : `'${value}' Already Exists, Choose Another`,
         },
         {
           type:
@@ -68,10 +71,10 @@ async function run() {
           name: 'projectType',
           message:
             typeof argTemplate === 'string' && !templates.includes(argTemplate)
-              ? lightMagenta(
+              ? white(
                   `The Template Chosen (${argTemplate}) Is Not Valid, Please Choose From The List Below`
                 )
-              : lightMagenta('Select a Type'),
+              : white('Select a Type'),
           initial: 0,
           choices: projectTypes.map((type) => {
             const color = type.color;
@@ -84,7 +87,7 @@ async function run() {
       ],
       {
         onCancel: () => {
-          throw new Error(red('CANCELED BY DEVELOPER !'));
+          throw new Error(red('CANCELED BY DEVELOPER'));
         },
       }
     );
@@ -171,4 +174,9 @@ function pkgFromUserAgent(userAgent: string | undefined) {
     name: pkgSpecArr[0],
     version: pkgSpecArr[1],
   };
+}
+
+function isEmpty(path: string) {
+  const files = fs.readdirSync(path);
+  return files.length === 0;
 }
