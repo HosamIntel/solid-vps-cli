@@ -176,7 +176,7 @@ function pkgFromUserAgent(userAgent: string | undefined) {
   };
 }
 
-function isEmpty(path: string) {
+export function isEmpty(path: string) {
   const files = fs.readdirSync(path);
   return files.length === 0;
 }
